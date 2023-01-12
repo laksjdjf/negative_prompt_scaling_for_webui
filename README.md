@@ -14,7 +14,7 @@ Furthermore the smaller the guidance scale, the less effective the negative prom
 
 This script replaces this formula as follows,
 
-$$\epsilon(x|u) + g_{scale} * (\epsilon(x|c) - \epsilon(x|n)) - n_{scale} * (\epsilon(x|n) - \epsilon(x|u))$$
+$$\epsilon(x|u) + g_{scale} * (\epsilon(x|c) - \epsilon(x|u)) - n_{scale} * (\epsilon(x|n) - \epsilon(x|u))$$
 
 $n_{scale}$ scales negative prompt.
 
