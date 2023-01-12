@@ -24,7 +24,7 @@ $n_{scale}$ scales negative prompt.
 
 put negative_scaler.py in scripts. see [it](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts).
 
-set "negative prompt scaling" in Scripts drop-down menu and check "enabled".
+set "negative prompt scaling" in Scripts drop-down menu and check "enable".
 
 **Only DDIM is applicable.**
 
