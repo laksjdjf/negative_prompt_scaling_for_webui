@@ -14,7 +14,7 @@ Furthermore the smaller the guidance scale, the less effective the negative prom
 
 This script replaces this formula as follows,
 
-$$\epsilon(x|u) + g_{scale} * (\epsilon(x|c) - \epsilon(x|n)) - n_{scale} * (\epsilon(x|n) - \epsilon(x|u))$$.
+$$\epsilon(x|u) + g_{scale} * (\epsilon(x|c) - \epsilon(x|n)) - n_{scale} * (\epsilon(x|n) - \epsilon(x|u))$$
 
 $n_{scale}$ scales negative prompt.
 
@@ -31,3 +31,5 @@ set "negative prompt scaling" in Scripts drop-down menu and check "enable".
 **This script is replacing a module, so unintended effects may be added somewhere. Use at your own risk.**
 
 I am assuming using txt2img, but it seems to work with img2img.
+
+![ui](https://github.com/laksjdjf/negative_prompt_scaling_for_webui/blob/images/ui.png?raw=true)
