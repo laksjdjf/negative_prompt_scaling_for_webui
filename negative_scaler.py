@@ -1,6 +1,5 @@
 #negative scaler script for webui
 
-
 import torch
 
 import modules.scripts as scripts
@@ -27,8 +26,13 @@ class Script(scripts.Script):
 
     def ui(self, is_img2img):
         with gr.Row():
+            gr.Markdown(
+                """
+                Set sampler to DDIM (^q^)
+                """)
+        with gr.Row():
             enabled = gr.Checkbox(label='Enable', value=False)
-            use_guidance_scale = gr.Checkbox(label='Use same value as guidance scale\n(ignore below slider)', value=False)
+            use_guidance_scale = gr.Checkbox(label='Use same value as guidance scale (ignore below slider)', value=False) #改行ってどうするの？
         with gr.Row():    
             negative_scale = gr.Slider(0, 50, value=7,step=0.5,label='negative_scale')
         return [enabled,use_guidance_scale ,negative_scale]
