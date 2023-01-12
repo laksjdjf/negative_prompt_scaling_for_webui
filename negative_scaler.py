@@ -62,7 +62,8 @@ class Script(scripts.Script):
                         assert isinstance(unconditional_conditioning, dict)
                         c_in = dict()
 
-                        #なんかぐちゃぐちゃなのでだれかたすけて（そもそも"c_concat"になにが入っているか分からない、condにもuncondにも同じものいれていたのでこうしてるけどいいのかな？）
+                        #なんかぐちゃぐちゃなのでだれかたすけて
+                        #そもそも"c_concat"になにが入っているか分からない、condにもuncondにも同じものいれていたのでこうしてるけどいいのかな？）
                         uc_dict = {"c_concat":c["c_concat"],"c_crossattn":[uc_t[0].cond.unsqueeze(0).repeat(p.batch_size,1,1) for uc_t in uc]}
                         for k in c:
                             if isinstance(c[k], list):
