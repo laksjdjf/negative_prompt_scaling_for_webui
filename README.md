@@ -30,4 +30,4 @@ set "negative prompt scaling" in Scripts drop-down menu and check "enabled".
 
 **This script is replacing a module, so unintended effects may be added somewhere. Use at your own risk.**
 
-
+I am assuming using txt2img, but it seems to work with img2img.
