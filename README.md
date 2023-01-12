@@ -22,7 +22,7 @@ $n_{scale}$ scales negative prompt.
 
 ## Usage
 
-put negative_scaler.py in scripts. see [it](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts).
+put negative_scaler.py in stable-diffusion-webui/scripts. see [it](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts).
 
 set "negative prompt scaling" in Scripts drop-down menu and check "enable".
 
