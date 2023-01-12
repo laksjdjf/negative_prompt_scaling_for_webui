@@ -11,7 +11,6 @@ This replaces $u$ with $n$ in the CFG formula.
 However it cant scaling negative prompt.
 
 Furthermore the smaller the guidance scale, the less effective the negative prompt (try substituting 1 for $g_{scale}$).
-あれ？guidance scale=1が基準なんだからそらそうなんじゃね？
 
 This script replaces this formula as follows,
 
