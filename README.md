@@ -28,6 +28,6 @@ set "negative prompt scaling" in Scripts drop-down menu and check "enabled".
 
 **Only DDIM is applicable.**
 
-
+**This script is replacing a module, so unintended effects may be added somewhere. So use at your own risk.**
 
 
