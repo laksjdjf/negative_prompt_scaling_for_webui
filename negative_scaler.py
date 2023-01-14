@@ -1,6 +1,7 @@
 #negative scaler script for webui
 
 import torch
+import numpy as np
 
 import modules.scripts as scripts
 import gradio as gr
@@ -35,16 +36,35 @@ class Script(scripts.Script):
                 Set sampler to DDIM or PLMS(^q^)
                 """)
         with gr.Row():
-            enabled = gr.Checkbox(label='Enable', value=False)
+            enable_negative_scale = gr.Checkbox(label='Enable negative scale', value=False)
             use_guidance_scale = gr.Checkbox(label='Use same value as guidance scale (ignore below slider)', value=False) #改行ってどうするの？
         with gr.Row():    
             negative_scale = gr.Slider(0, 50, value=7,step=0.5,label='negative_scale')
-        return [enabled,use_guidance_scale ,negative_scale]
     
-    def run(self, p: StableDiffusionProcessing, enabled,use_guidance_scale,negative_scale):
-        if not enabled:
+        with gr.Row():
+            gr.Markdown(
+                """
+                Linearly increasing(decreasing) of guidance(negative) scale.
+
+                If negative scale is disabled, generation time remains the same.
+                """)
+        with gr.Row():
+            enable_scaling= gr.Checkbox(label='Enable scale scaling', value=False)
+            use_guidance_scale_scaling = gr.Checkbox(label='Use same value as guidance scale (ignore negative slider)', value=False)
+        with gr.Row():    
+            initial_guidance_scale = gr.Slider( 1, 50, value=7,step=0.5,label='guidance_scale of initial step')
+            last_guidance_scale = gr.Slider( 1, 50, value=7,step=0.5,label='guidance_scale of last step')
+        with gr.Row():    
+            initial_negative_scale = gr.Slider( 1, 50, value=7,step=0.5,label='negative_scale of initial step')
+            last_negative_scale = gr.Slider( 1, 50, value=7,step=0.5,label='negative_scale of last step')
+
+        return [enable_negative_scale,use_guidance_scale ,negative_scale,enable_scaling,use_guidance_scale_scaling,initial_guidance_scale,last_guidance_scale,initial_negative_scale,last_negative_scale]
+    
+    def run(self, p: StableDiffusionProcessing,enable_negative_scale,use_guidance_scale ,negative_scale,enable_scaling,use_guidance_scale_scaling,initial_guidance_scale,last_guidance_scale,initial_negative_scale,last_negative_scale):
+        if not ( enable_negative_scale or enable_scaling ):
             return modules.processing.process_images(p)
 
+        cfg_repeat = 3 if enable_negative_scale else 2
         ##################################################################################################################
         #samplerの関数書き換え用クラス、関数の中にクラスとかきもいし読みづらいけど、run内のローカル変数を使いたい。global変数うまくつかえばいいのかな？
         ##################################################################################################################
@@ -54,22 +74,32 @@ class Script(scripts.Script):
             def __init__(self, model, schedule="linear", **kwargs):
                 super().__init__(model, schedule="linear", **kwargs)
                 #反映できているか確認しておく
-                print(f"using negative_scale:{negative_scale}!!!!!!!!!!!!!!!!!!!!!")
+                if enable_scaling:
+                    print(f"using scale scaling:{guidance_scale_schedule[-1]} to {guidance_scale_schedule[0]} !!!!!!!!!!!!")
+                    if enable_negative_scale:
+                        print(f"using negative scale scaling:{negative_scale_schedule[-1]} to {negative_scale_schedule[0]} !!!!!!!!!!!!")
+                else:
+                    print(f"using negative_scale:{negative_scale} !!!!!!!!!!!!")
             @torch.no_grad()
             def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
                                   temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                                   unconditional_guidance_scale=1., unconditional_conditioning=None,
                                   dynamic_threshold=None):
                 b, *_, device = *x.shape, x.device
-                #print(f"using negative_scale:{negative_scale} !!!!!!!!!!!11!!!")
+                
+                if enable_scaling:
+                    guidance_scale_step = guidance_scale_schedule[index]
+                    negative_scale_step = negative_scale_schedule[index]
+                else:
+                    guidance_scale_step = unconditional_guidance_scale
+                    negative_scale_step = negative_scale
                 if unconditional_conditioning is None:
                     model_output = self.model.apply_model(x, t, c)
                 else:
-
                     #入力の拡張を2⇒3へ
-                    x_in = torch.cat([x] * 3)
-                    t_in = torch.cat([t] * 3)
-                    if isinstance(c, dict):
+                    x_in = torch.cat([x] * cfg_repeat)
+                    t_in = torch.cat([t] * cfg_repeat)
+                    if enable_negative_scale:
                         assert isinstance(unconditional_conditioning, dict)
                         c_in = dict()
 
@@ -85,19 +115,26 @@ class Script(scripts.Script):
                                 c_in[k] = torch.cat([
                                         unconditional_conditioning[k],
                                         c[k],uc_dict[k][0]])
-                    elif isinstance(c, list):
-
-                        #こっちになることがあったりするのかもわからない
-                        c_in = list()
-                        assert isinstance(unconditional_conditioning, list)
-                        for i in range(len(c)):
-                            c_in.append(torch.cat([unconditional_conditioning[i], c[i], uc[i]]))
                     else:
-                        c_in = torch.cat([unconditional_conditioning, c, uc])
+                        assert isinstance(unconditional_conditioning, dict)
+                        c_in = dict()
+                        for k in c:
+                            if isinstance(c[k], list):
+                                c_in[k] = [torch.cat([
+                                    unconditional_conditioning[k][i],
+                                    c[k][i]]) for i in range(len(c[k]))]
+                            else:
+                                c_in[k] = torch.cat([
+                                        unconditional_conditioning[k],
+                                        c[k]])
 
                     #このプログラムの核部分
-                    model_negative, model_t, model_uncond = self.model.apply_model(x_in, t_in, c_in).chunk(3)
-                    model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond) - negative_scale * (model_negative - model_uncond)
+                    if enable_negative_scale:
+                        model_negative, model_t, model_uncond = self.model.apply_model(x_in, t_in, c_in).chunk(3)
+                        model_output = model_uncond + guidance_scale_step * (model_t - model_uncond) - negative_scale_step * (model_negative - model_uncond)
+                    else:
+                        model_negative, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
+                        model_output = model_negative + guidance_scale_step * (model_t - model_negative)
 
                 #これ以降何起きてるか知らない。
                 if self.model.parameterization == "v":
@@ -146,26 +183,38 @@ class Script(scripts.Script):
             def __init__(self, model, schedule="linear", **kwargs):
                 super().__init__(model, schedule="linear", **kwargs)
                 #反映できているか確認しておく
-                print(f"using negative_scale:{negative_scale}!!!!!!!!!!!!!!!!!!!!!")
+                if enable_scaling:
+                    print(f"using scale scaling:{guidance_scale_schedule[-1]} to {guidance_scale_schedule[0]} !!!!!!!!!!!!")
+                    if enable_negative_scale:
+                        print(f"using negative scale scaling:{negative_scale_schedule[-1]} to {negative_scale_schedule[0]} !!!!!!!!!!!!")
+                else:
+                    print(f"using negative_scale:{negative_scale} !!!!!!!!!!!!")
             @torch.no_grad()
             def p_sample_plms(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
                               temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                               unconditional_guidance_scale=1., unconditional_conditioning=None, old_eps=None, t_next=None,
                               dynamic_threshold=None):
                 b, *_, device = *x.shape, x.device
-
+                if enable_scaling:
+                    guidance_scale_step = guidance_scale_schedule[index]
+                    negative_scale_step = negative_scale_schedule[index]
+                else:
+                    guidance_scale_step = unconditional_guidance_scale
+                    negative_scale_step = negative_scale
                 def get_model_output(x, t):
                     if unconditional_conditioning is None:
                         e_t = self.model.apply_model(x, t, c)
                     else:
                         #入力の拡張を2⇒3にする
-                        x_in = torch.cat([x] * 3)
-                        t_in = torch.cat([t] * 3)
+                        x_in = torch.cat([x] * cfg_repeat)
+                        t_in = torch.cat([t] * cfg_repeat)
                         #動けばいいやの精神でddimから丸写し
-                        if isinstance(c, dict):
+                        if enable_negative_scale:
                             assert isinstance(unconditional_conditioning, dict)
                             c_in = dict()
 
+                            #なんかぐちゃぐちゃなのでだれかたすけて
+                            #そもそも"c_concat"になにが入っているか分からない、condにもuncondにも同じものいれていたのでこうしてるけどいいのかな？）
                             uc_dict = {"c_concat":c["c_concat"],"c_crossattn":[uc_t[0].cond.unsqueeze(0).repeat(p.batch_size,1,1) for uc_t in uc]}
                             for k in c:
                                 if isinstance(c[k], list):
@@ -176,10 +225,26 @@ class Script(scripts.Script):
                                     c_in[k] = torch.cat([
                                             unconditional_conditioning[k],
                                             c[k],uc_dict[k][0]])
-                        
+                        else:
+                            assert isinstance(unconditional_conditioning, dict)
+                            c_in = dict()
+                            for k in c:
+                                if isinstance(c[k], list):
+                                    c_in[k] = [torch.cat([
+                                        unconditional_conditioning[k][i],
+                                        c[k][i]]) for i in range(len(c[k]))]
+                                else:
+                                    c_in[k] = torch.cat([
+                                            unconditional_conditioning[k],
+                                            c[k]])
+                            
                         #このプログラムの核部分
-                        e_t_negative, e_t, e_t_uncond = self.model.apply_model(x_in, t_in, c_in).chunk(3)
-                        e_t = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond) - negative_scale * (e_t_negative - e_t_uncond)
+                        if enable_negative_scale:
+                            e_t_negative, e_t, e_t_uncond = self.model.apply_model(x_in, t_in, c_in).chunk(3)
+                            e_t = e_t_uncond + guidance_scale_step * (e_t - e_t_uncond) - negative_scale_step * (e_t_negative - e_t_uncond)
+                        else:
+                            e_t_negative, e_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
+                            e_t = e_t_negative + guidance_scale_step * (e_t - e_t_negative)
 
                     if score_corrector is not None:
                         assert self.model.parameterization == "eps"
@@ -239,6 +304,13 @@ class Script(scripts.Script):
         #私みたいなめんどくさがりのためにg=nにしたいときはnを設定しなくてもいいようにしておく        
         if use_guidance_scale:
             negative_scale = p.cfg_scale
+
+        #逆拡散過程から見ているのでlast→initialとする
+        guidance_scale_schedule = np.linspace(last_guidance_scale, initial_guidance_scale, p.steps)
+        if use_guidance_scale_scaling:
+            negative_scale_schedule = guidance_scale_schedule
+        else:
+            negative_scale_schedule = np.linspace(last_negative_scale, initial_negative_scale, p.steps)
 
         #unconditionのテキスト埋め込みベクトル
         with devices.autocast():
