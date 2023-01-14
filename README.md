@@ -39,4 +39,5 @@ I am assuming using txt2img, but it seems to work with img2img.
 
 ## UPDATES 
 2023/01/14 step by step scaling of scale.
+
 2023/01/13 support PLMS sampler.
