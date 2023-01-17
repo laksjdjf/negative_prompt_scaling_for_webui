@@ -16,6 +16,8 @@ from ldm.modules.diffusionmodules.util import noise_like
 import ldm.models.diffusion.ddim as ddim
 import ldm.models.diffusion.plms as plms
 
+SCALE_MAX = 100
+
 class OrgDDIMSampler(ddim.DDIMSampler):
     pass
 
@@ -39,7 +41,7 @@ class Script(scripts.Script):
             enable_negative_scale = gr.Checkbox(label='Enable negative scale', value=False)
             use_guidance_scale = gr.Checkbox(label='Use same value as guidance scale (ignore below slider)', value=False) #改行ってどうするの？
         with gr.Row():    
-            negative_scale = gr.Slider(0, 50, value=7,step=0.5,label='negative_scale')
+            negative_scale = gr.Slider(0, SCALE_MAX, value=7,step=0.5,label='negative_scale')
     
         with gr.Row():
             gr.Markdown(
@@ -52,15 +54,17 @@ class Script(scripts.Script):
             enable_scaling= gr.Checkbox(label='Enable scale scaling', value=False)
             use_guidance_scale_scaling = gr.Checkbox(label='Use same value as guidance scale (ignore negative slider)', value=False)
         with gr.Row():    
-            initial_guidance_scale = gr.Slider( 1, 50, value=7,step=0.5,label='guidance_scale of initial step')
-            last_guidance_scale = gr.Slider( 1, 50, value=7,step=0.5,label='guidance_scale of last step')
+            initial_guidance_scale = gr.Slider( 1, SCALE_MAX, value=7,step=0.5,label='guidance_scale of initial step')
+            last_guidance_scale = gr.Slider( 1, SCALE_MAX, value=7,step=0.5,label='guidance_scale of last step')
         with gr.Row():    
-            initial_negative_scale = gr.Slider( 1, 50, value=7,step=0.5,label='negative_scale of initial step')
-            last_negative_scale = gr.Slider( 1, 50, value=7,step=0.5,label='negative_scale of last step')
+            initial_negative_scale = gr.Slider( 1, SCALE_MAX, value=7,step=0.5,label='negative_scale of initial step')
+            last_negative_scale = gr.Slider( 1, SCALE_MAX, value=7,step=0.5,label='negative_scale of last step')
+        with gr.Row():
+            latent_scale = gr.Slider(0.9,1.0,value=0.99,step=0.001,label='latent scale')
 
-        return [enable_negative_scale,use_guidance_scale ,negative_scale,enable_scaling,use_guidance_scale_scaling,initial_guidance_scale,last_guidance_scale,initial_negative_scale,last_negative_scale]
+        return [enable_negative_scale,use_guidance_scale ,negative_scale,enable_scaling,use_guidance_scale_scaling,initial_guidance_scale,last_guidance_scale,initial_negative_scale,last_negative_scale,latent_scale]
     
-    def run(self, p: StableDiffusionProcessing,enable_negative_scale,use_guidance_scale ,negative_scale,enable_scaling,use_guidance_scale_scaling,initial_guidance_scale,last_guidance_scale,initial_negative_scale,last_negative_scale):
+    def run(self, p: StableDiffusionProcessing,enable_negative_scale,use_guidance_scale ,negative_scale,enable_scaling,use_guidance_scale_scaling,initial_guidance_scale,last_guidance_scale,initial_negative_scale,last_negative_scale,latent_scale):
         if not ( enable_negative_scale or enable_scaling ):
             return modules.processing.process_images(p)
 
@@ -174,6 +178,7 @@ class Script(scripts.Script):
                 if noise_dropout > 0.:
                     noise = torch.nn.functional.dropout(noise, p=noise_dropout)
                 x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
+                x_prev *= latent_scale
                 return x_prev, pred_x0
 
 
@@ -276,6 +281,7 @@ class Script(scripts.Script):
                     if noise_dropout > 0.:
                         noise = torch.nn.functional.dropout(noise, p=noise_dropout)
                     x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
+                    x_prev *= latent_scale
                     return x_prev, pred_x0
 
                 e_t = get_model_output(x, t)
