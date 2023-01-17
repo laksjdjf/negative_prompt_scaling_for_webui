@@ -26,7 +26,7 @@ put negative_scaler.py in stable-diffusion-webui/scripts. see [it](https://githu
 
 set "negative prompt scaling" in Scripts drop-down menu and check "enable".
 
-**Only DDIM is applicable.**
+**Only DDIM and PLMS is applicable.**
 
 **This script is replacing a module, so unintended effects may be added somewhere. Use at your own risk.**
 
@@ -36,3 +36,8 @@ I am assuming using txt2img, but it seems to work with img2img.
 
 ## Examples
 [Examle.md](https://github.com/laksjdjf/negative_prompt_scaling_for_webui/blob/main/Examle.md)
+
+## UPDATES 
+2023/01/14 step by step scaling of scale.
+
+2023/01/13 support PLMS sampler.
