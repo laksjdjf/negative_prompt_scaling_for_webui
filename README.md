@@ -2,33 +2,33 @@
 
 let $n$ = negative prompt emb, $c$ = prompt emb, $u$ = empty prompt emb, $\epsilon$ = output of UNet, $x$ = latent
 
-The formula for using [negative prompt](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Negative-prompt) is as follows,
+The formula for using the [negative prompt](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Negative-prompt) is as follows,
 
 $$\epsilon(x|n) + g_{scale} * (\epsilon(x|c) - \epsilon(x|n)) $$
 
 This replaces $u$ with $n$ in the CFG formula.
 
-However it cant scaling negative prompt.
+However it cannot scale negative prompt.
 
-Furthermore the smaller the guidance scale, the less effective the negative prompt (try substituting 1 for $g_{scale}$).
+Also, the smaller the guide scale, the less effective the negative prompt will be (try replacing $g_{scale}$ with 1).
 
-This script replaces this formula as follows,
+This script replaces the formula as follows,
 
 $$\epsilon(x|u) + g_{scale} * (\epsilon(x|c) - \epsilon(x|u)) - n_{scale} * (\epsilon(x|n) - \epsilon(x|u))$$
 
-$n_{scale}$ scales negative prompt.
+$n_{scale}$ scales the negative prompt.
 
-**As shown in the formula, the computational complexity is 1.5 times higher because three noises need to be inferenced.**
+**As can be seen from the formula, the computational complexity is 1.5 times higher, since three noises have to be inferred.**
 
 ## Usage
 
-put negative_scaler.py in stable-diffusion-webui/scripts. see [it](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts).
+Put negative_scaler.py in stable-diffusion-webui/scripts. see [it](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts).
 
 set "negative prompt scaling" in Scripts drop-down menu and check "enable".
 
-**Only DDIM and PLMS is applicable.**
+**Only DDIM and PLMS are applicable.**
 
-**This script is replacing a module, so unintended effects may be added somewhere. Use at your own risk.**
+**This script replaces a module, so unintended effects may be added somewhere. Use at your own risk.**
 
 I am assuming using txt2img, but it seems to work with img2img.
 
